@@ -1,0 +1,84 @@
+version: "3"
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy:0.8.0
+    restart: unless-stopped
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - certs:/etc/nginx/certs:ro
+      - confd:/etc/nginx/conf.d
+      - vhostd:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+    environment:
+      - ENABLE_IPV6:true
+    labels:
+      - com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy
+
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion:2.0.2
+    restart: unless-stopped
+    container_name: letsencrypt
+    volumes:
+      - certs:/etc/nginx/certs:rw
+      - confd:/etc/nginx/conf.d
+      - vhostd:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  mail:
+    image: analogic/poste.io:2.2.26
+    restart: unless-stopped
+    container_name: poste-mail
+    ports:
+      - "25:25" #puerto smtp (envio) no cifrado
+      - "110:110" #puerto pop3 (recepcion) no cifrado
+      - "143:143" #puerto imap (recepcion) no cifrado
+      - "465:465" #puerto smtp (envio) cifrado
+      - "587:587" #puerto smtp (envio) con soporte TLS
+      - "993:993" #puerto pop3 (recepcion) cifrado
+      - "995:995" #puerto imap (recepcion) cifrado
+    expose:
+      - "80"
+      - "443"
+    volumes:
+      - /usr/share/zoneinfo/UTC:/etc/localtime:ro
+      - /root/docker/mail-data:/data
+      - /root/docker/mail/etc/spamassassin/local.cf:/etc/spamassassin/local.cf
+      - /root/docker/volumes/html/.well-known:/opt/www/.well-known
+    environment:
+      - DISABLE_CLAMAV=TRUE
+      - HTTPS=OFF
+      - VIRTUAL_HOST=mail.${HOSTNAME}
+      - LETSENCRYPT_HOST=mail.${HOSTNAME}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+
+  www:
+    image: nginx:1.19.6-alpine
+    restart: unless-stopped
+    container_name: website
+    expose:
+      - "80"
+      - "443"
+    volumes:
+      - ./html:/usr/share/nginx/html:ro
+    environment:
+      - VIRTUAL_HOST=${HOSTNAME}
+      - LETSENCRYPT_HOST=${HOSTNAME}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    depends_on:
+      - nginx-proxy
+      - letsencrypt
+
+volumes:
+  certs:
+  html:
+    driver: local-persist
+    driver_opts:
+      mountpoint: /root/docker/volumes/html
+  vhostd:
+  confd:
+  prometheus:

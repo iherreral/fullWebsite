@@ -9,10 +9,10 @@ services:
       - "443:443"
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - certs:/etc/nginx/certs:ro
-      - confd:/etc/nginx/conf.d
-      - vhostd:/etc/nginx/vhost.d
-      - html:/usr/share/nginx/html
+      - ./certs:/etc/nginx/certs:ro
+      - ./confd:/etc/nginx/conf.d
+      - ./vhostd:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
     environment:
       - ENABLE_IPV6:true
     labels:
@@ -23,10 +23,10 @@ services:
     restart: unless-stopped
     container_name: letsencrypt
     volumes:
-      - certs:/etc/nginx/certs:rw
-      - confd:/etc/nginx/conf.d
-      - vhostd:/etc/nginx/vhost.d
-      - html:/usr/share/nginx/html
+      - ./certs:/etc/nginx/certs:rw
+      - ./confd:/etc/nginx/conf.d
+      - ./vhostd:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   mail:
